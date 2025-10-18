@@ -88,30 +88,38 @@ export class Storage{
     return null;
   }
 
-  async saveKey(key){
-    const arr = this.state[key] || [];
-    const jsonl = this.toJsonl(arr);
-    this._setCache(key, jsonl);
+  // Replace the entire saveKey(key) with this:
+async saveKey(key){
+  const arr = this.state[key] || [];
+  const jsonl = this.toJsonl(arr);
 
-    if(!this.isConfigured() || !this.repo.token) return;
+  // 1) Always update local cache so refresh won't lose data
+  this._setCache(key, jsonl);
 
-    if (key === 'varieties' && arr.length === 0){
-      console.warn('[Guard] Refusing to overwrite remote with empty varieties.');
-      return;
-    }
+  // 2) If no GitHub config/token, stop here (local-only mode)
+  if (!this.isConfigured() || !this.repo.token) return;
 
-    const path = this.paths[key];
+  // Safety: don't wipe remote with empty varieties by accident
+  if (key === 'varieties' && arr.length === 0) {
+    console.warn('[Guard] Refusing to overwrite remote with empty varieties.');
+    return;
+  }
 
-    let sha;
-    const getRes = await fetch(
+  const path = this.paths[key];
+
+  // Helper to fetch current SHA (or undefined if file doesn't exist)
+  const getSha = async () => {
+    const r = await fetch(
       `https://api.github.com/repos/${this.repo.owner}/${this.repo.name}/contents/${path}?ref=${this.repo.branch}`,
       { headers:{ Authorization:`Bearer ${this.repo.token}` } }
     );
-    if (getRes.ok){
-      const meta = await getRes.json();
-      sha = meta.sha;
-    }
+    if (!r.ok) return undefined;
+    const meta = await r.json();
+    return meta.sha;
+  };
 
+  // Actual PUT
+  const putWithSha = async (sha) => {
     const body = {
       message: `update ${path}`,
       content: btoa(unescape(encodeURIComponent(jsonl))),
@@ -123,11 +131,26 @@ export class Storage{
       `https://api.github.com/repos/${this.repo.owner}/${this.repo.name}/contents/${path}`,
       { method:'PUT', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${this.repo.token}` }, body: JSON.stringify(body) }
     );
-    if (!putRes.ok){
-      console.error('GitHub save failed', await putRes.text());
-      throw new Error('GitHub save failed');
-    }
+    return putRes;
+  };
+
+  // 3) First attempt
+  let sha = await getSha();
+  let res = await putWithSha(sha);
+
+  // 4) If conflict (409), re-fetch SHA and retry once
+  if (res.status === 409) {
+    console.warn('[FigOps] 409 conflict — refetching sha and retrying…');
+    sha = await getSha();
+    res = await putWithSha(sha);
   }
+
+  if (!res.ok) {
+    const txt = await res.text().catch(()=>'(no body)');
+    console.error('GitHub save failed', res.status, txt);
+    throw new Error('GitHub save failed');
+  }
+}
 
   async syncKey(key){
     const path = this.paths[key];
