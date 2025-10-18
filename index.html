@@ -1,248 +1,157 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fig Operations Manager</title>
-    <link rel="stylesheet" href="styles.css">
-    <!-- Chart.js for analytics -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Fig Ops — Step 1: Varieties</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header>
-        <h1>Fig Operations Manager</h1>
-    </header>
+  <header>
+    <h1>🌳 Fig Ops — Varieties</h1>
+    <div id="status" class="status">offline</div>
+  </header>
 
-    <!-- Top navigation tabs -->
+  <main>
     <nav class="tabs">
-        <button class="tab-link" data-tab="dashboard">Dashboard</button>
-        <button class="tab-link" data-tab="varieties">Varieties</button>
-        <button class="tab-link" data-tab="lots">Lots</button>
-        <button class="tab-link" data-tab="customers">Customers</button>
-        <button class="tab-link" data-tab="orders">Orders</button>
-        <button class="tab-link" data-tab="analytics">Analytics</button>
-        <button class="tab-link" data-tab="settings">Settings</button>
+      <button data-tab="varieties" class="active">Varieties</button>
+      <button data-tab="settings">Settings</button>
     </nav>
 
-    <main>
-        <!-- Dashboard overview -->
-        <section id="dashboard" class="tab-section">
-            <h2>Dashboard</h2>
-            <div id="dashboard-summary" class="metrics-container">
-                <!-- Summary cards injected here -->
-            </div>
-        </section>
+    <section id="varieties" class="tab">
+      <div class="card">
+        <h2>Add / Edit Variety</h2>
+        <div class="grid">
+          <label>Name
+            <input id="v_name" placeholder="e.g., Black Madeira">
+          </label>
+          <label>Category
+            <select id="v_category">
+              <option value="workhorse">Workhorse</option>
+              <option value="premium">Premium</option>
+              <option value="grail">Grail</option>
+            </select>
+          </label>
+          <label>Default Price
+            <input id="v_price" type="number" min="0" step="0.01" placeholder="e.g., 45">
+          </label>
+          <label>Status
+            <select id="v_status">
+              <option value="active">Active</option>
+              <option value="paused">Paused</option>
+            </select>
+          </label>
+          <label>Tags (comma separated)
+            <input id="v_tags" placeholder="early, heat-tolerant">
+          </label>
+          <label>Description
+            <textarea id="v_desc" rows="2" placeholder="Notes, flavor, vigor, climate fit"></textarea>
+          </label>
+        </div>
+        <div class="row">
+          <button id="saveVarietyBtn">Save Variety</button>
+          <button id="resetFormBtn" class="ghost">Reset</button>
+        </div>
+        <div class="hint" id="editHint" hidden>Editing: <span id="editingId"></span></div>
+      </div>
 
-        <!-- Varieties management -->
-        <section id="varieties" class="tab-section hidden">
-            <h2>Varieties</h2>
-            <div class="form-container" id="variety-form">
-                <h3 id="variety-form-title">Add Variety</h3>
-                <input type="hidden" id="variety-id">
-                <div class="field-row">
-                    <label for="variety-name">Name</label>
-                    <input id="variety-name" type="text" required>
-                </div>
-                <div class="field-row">
-                    <label for="variety-category">Category</label>
-                    <input id="variety-category" type="text">
-                </div>
-                <div class="field-row">
-                    <label for="variety-price">Price per unit</label>
-                    <input id="variety-price" type="number" step="0.01" min="0">
-                </div>
-                <div class="field-row">
-                    <label for="variety-description">Description</label>
-                    <textarea id="variety-description" rows="2"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button id="variety-save" class="primary">Save</button>
-                    <button id="variety-cancel" class="secondary hidden">Cancel</button>
-                </div>
-            </div>
-            <table id="variety-table" class="data-table">
-                <thead>
-                    <tr><th>Name</th><th>Category</th><th>Price</th><th>Description</th><th>Actions</th></tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </section>
+      <div class="card">
+        <h2>Varieties List</h2>
+        <div class="table-wrap">
+          <table id="varietiesTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Tags</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-        <!-- Lots management -->
-        <section id="lots" class="tab-section hidden">
-            <h2>Lots</h2>
-            <div class="form-container" id="lot-form">
-                <h3 id="lot-form-title">Add Lot</h3>
-                <input type="hidden" id="lot-id">
-                <div class="field-row">
-                    <label for="lot-variety">Variety</label>
-                    <select id="lot-variety"></select>
-                </div>
-                <div class="field-row">
-                    <label for="lot-method">Propagation method</label>
-                    <input id="lot-method" type="text" placeholder="e.g. short node, air-layer">
-                </div>
-                <div class="field-row">
-                    <label for="lot-start">Start date</label>
-                    <input id="lot-start" type="date">
-                </div>
-                <div class="field-row">
-                    <label for="lot-end">End/rooting date</label>
-                    <input id="lot-end" type="date">
-                </div>
-                <div class="field-row">
-                    <label for="lot-cuttings">Cuttings</label>
-                    <input id="lot-cuttings" type="number" min="1">
-                </div>
-                <div class="field-row">
-                    <label for="lot-rooted">Rooted cuttings</label>
-                    <input id="lot-rooted" type="number" min="0">
-                </div>
-                <div class="field-row">
-                    <label for="lot-mix">Mix/media</label>
-                    <input id="lot-mix" type="text" placeholder="e.g. perlite:peat:olive waste">
-                </div>
-                <div class="field-row">
-                    <label for="lot-status">Status</label>
-                    <input id="lot-status" type="text" placeholder="e.g. active, completed">
-                </div>
-                <div class="field-row">
-                    <label for="lot-notes">Notes</label>
-                    <textarea id="lot-notes" rows="2"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button id="lot-save" class="primary">Save</button>
-                    <button id="lot-cancel" class="secondary hidden">Cancel</button>
-                </div>
-            </div>
-            <table id="lot-table" class="data-table">
-                <thead>
-                    <tr><th>ID</th><th>Variety</th><th>Method</th><th>Start</th><th>End</th><th>Cuttings</th><th>Rooted</th><th>Success %</th><th>Status</th><th>Actions</th></tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </section>
+    <section id="settings" class="tab" hidden>
+      <div class="card">
+        <h2>GitHub Repo (optional for sync)</h2>
+        <div class="grid">
+          <label>Owner
+            <input id="gh_owner" placeholder="your-username">
+          </label>
+          <label>Repo
+            <input id="gh_repo" placeholder="your-repo">
+          </label>
+          <label>Branch
+            <input id="gh_branch" value="main">
+          </label>
+          <label>Token (fine-grained; contents read/write)
+            <input id="gh_token" type="password" placeholder="ghp_...">
+          </label>
+        </div>
+        <div class="row">
+          <button id="saveRepoBtn">Save Settings</button>
+          <button id="syncBtn">Sync to GitHub</button>
+          <button id="reloadBtn" class="ghost">Reload from GitHub</button>
+        </div>
+        <p class="hint">Data lives in <code>data/varieties.jsonl</code> as portable JSON Lines. If the repo is private, syncing requires a token.</p>
+      </div>
+    </section>
+  </main>
 
-        <!-- Customers management -->
-        <section id="customers" class="tab-section hidden">
-            <h2>Customers</h2>
-            <div class="form-container" id="customer-form">
-                <h3 id="customer-form-title">Add Customer</h3>
-                <input type="hidden" id="customer-id">
-                <div class="field-row">
-                    <label for="customer-name">Name</label>
-                    <input id="customer-name" type="text" required>
-                </div>
-                <div class="field-row">
-                    <label for="customer-phone">Phone</label>
-                    <input id="customer-phone" type="tel">
-                </div>
-                <div class="field-row">
-                    <label for="customer-address">Address</label>
-                    <input id="customer-address" type="text">
-                </div>
-                <div class="field-row">
-                    <label for="customer-note">Note</label>
-                    <textarea id="customer-note" rows="2"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button id="customer-save" class="primary">Save</button>
-                    <button id="customer-cancel" class="secondary hidden">Cancel</button>
-                </div>
-            </div>
-            <table id="customer-table" class="data-table">
-                <thead>
-                    <tr><th>Name</th><th>Phone</th><th>Address</th><th>Note</th><th>Actions</th></tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </section>
+  <footer>Step 1 complete — Varieties CRUD + JSONL + optional GitHub sync</footer>
 
-        <!-- Orders management -->
-        <section id="orders" class="tab-section hidden">
-            <h2>Orders</h2>
-            <div class="form-container" id="order-form">
-                <h3 id="order-form-title">Add Order</h3>
-                <input type="hidden" id="order-id">
-                <div class="field-row">
-                    <label for="order-date">Date</label>
-                    <input id="order-date" type="date">
-                </div>
-                <div class="field-row">
-                    <label for="order-customer">Customer</label>
-                    <select id="order-customer"></select>
-                </div>
-                <div id="order-items-container" class="items-container">
-                    <h4>Items</h4>
-                    <table id="order-items-table" class="items-table">
-                        <thead>
-                            <tr><th>Variety</th><th>Quantity</th><th>Unit price</th><th>Subtotal</th><th>Remove</th></tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                    <button id="add-item" type="button">Add Item</button>
-                </div>
-                <div class="field-row">
-                    <label>Total</label>
-                    <span id="order-total">0.00</span>
-                </div>
-                <div class="field-row">
-                    <label for="order-status">Status</label>
-                    <input id="order-status" type="text" placeholder="e.g. pending, delivered">
-                </div>
-                <div class="field-row">
-                    <label for="order-note">Note</label>
-                    <textarea id="order-note" rows="2"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button id="order-save" class="primary">Save</button>
-                    <button id="order-cancel" class="secondary hidden">Cancel</button>
-                </div>
-            </div>
-            <table id="order-table" class="data-table">
-                <thead>
-                    <tr><th>ID</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Actions</th></tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </section>
+  <script type="module">
+    import { Storage } from './modules/storage.js';
+    import { initVarietiesUI } from './modules/varieties.js';
 
-        <!-- Analytics view -->
-        <section id="analytics" class="tab-section hidden">
-            <h2>Analytics</h2>
-            <div id="analytics-content" class="analytics-container">
-                <!-- Charts and metrics injected here -->
-            </div>
-        </section>
+    const tabs = document.querySelectorAll('nav.tabs button');
+    const sections = document.querySelectorAll('main .tab');
+    tabs.forEach(btn => btn.addEventListener('click', () => {
+      tabs.forEach(b => b.classList.remove('active')); btn.classList.add('active');
+      sections.forEach(s => s.hidden = s.id !== btn.dataset.tab);
+    }));
 
-        <!-- Settings view -->
-        <section id="settings" class="tab-section hidden">
-            <h2>Settings</h2>
-            <div class="form-container" id="settings-form">
-                <div class="field-row">
-                    <label for="gh-owner">GitHub Owner/User</label>
-                    <input id="gh-owner" type="text" placeholder="e.g. my-user">
-                </div>
-                <div class="field-row">
-                    <label for="gh-repo">Repository</label>
-                    <input id="gh-repo" type="text" placeholder="e.g. fig-ops">
-                </div>
-                <div class="field-row">
-                    <label for="gh-branch">Branch</label>
-                    <input id="gh-branch" type="text" value="main">
-                </div>
-                <div class="field-row">
-                    <label for="gh-token">Personal Access Token</label>
-                    <input id="gh-token" type="password" autocomplete="new-password">
-                </div>
-                <div class="form-actions">
-                    <button id="settings-save" class="primary">Save Settings</button>
-                </div>
-            </div>
-        </section>
-    </main>
+    const store = new Storage();
+    await store.loadAll();
+    document.getElementById('status').textContent = store.isConfigured() ? 'ready' : 'offline';
 
-    <!-- Main JS entrypoint -->
-    <script type="module" src="modules/app.js"></script>
+    initVarietiesUI(store);
+
+    // Settings handlers
+    const ow = document.getElementById('gh_owner');
+    const rp = document.getElementById('gh_repo');
+    const br = document.getElementById('gh_branch');
+    const tk = document.getElementById('gh_token');
+    // preload existing
+    if (store.repo.owner) ow.value = store.repo.owner;
+    if (store.repo.name) rp.value = store.repo.name;
+    if (store.repo.branch) br.value = store.repo.branch;
+    if (store.repo.token) tk.value = store.repo.token;
+
+    document.getElementById('saveRepoBtn').onclick = () => {
+      store.setRepo({ owner: ow.value.trim(), name: rp.value.trim(), branch: br.value.trim(), token: tk.value.trim() });
+      document.getElementById('status').textContent = store.isConfigured() ? 'ready' : 'offline';
+      alert('Saved.');
+    };
+    document.getElementById('syncBtn').onclick = async () => {
+      document.getElementById('status').textContent = 'syncing...';
+      await store.saveKey('varieties'); // push local changes
+      document.getElementById('status').textContent = 'synced';
+      alert('Synced to GitHub (if configured).');
+    };
+    document.getElementById('reloadBtn').onclick = async () => {
+      await store.loadKey('varieties'); // reload from repo/raw
+      alert('Reloaded from GitHub (if configured).');
+      window.location.reload();
+    };
+
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+  </script>
 </body>
 </html>
