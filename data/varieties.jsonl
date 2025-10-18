@@ -1,2 +1,2 @@
-{"id":"VAR-0001","name":"Black Madeira","category":"grail","default_price":7500,"status":"active","tags":["rich","late"],"description":"Intense flavor; later ripening.","updated_at":"2025-10-18T22:15:54.296Z"}
-{"id":"VAR-0002","name":"BNR","category":"premium","default_price":550,"status":"active","tags":["productive"],"description":"Productive; collector favorite.","updated_at":"2025-10-18T22:16:28.448Z"}
+{"id":"VAR-0001","name":"Black Madeira","category":"grail","default_price":75,"status":"active","tags":["rich","late"],"description":"Intense flavor; later ripening.","created_at":"2025-10-18T22:16:43.777Z"}
+{"id":"VAR-0002","name":"BNR","category":"premium","default_price":55,"status":"active","tags":["productive"],"description":"Productive; collector favorite.","created_at":"2025-10-18T22:16:43.777Z"}
