@@ -1,163 +1,248 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <link rel="manifest" href="manifest.json">
-  <title>Fig Ops — Saplings Manager</title>
-  <style>
-    :root{--bg:#0b132b;--card:#1c2541;--muted:#3a506b;--accent:#5bc0be;--text:#eaeaea}
-    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
-    header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);position:sticky;top:0;z-index:10}
-    header h1{font-size:18px;margin:0} header .pill{padding:6px 10px;border-radius:999px;background:var(--muted);font-size:12px}
-    main{padding:16px;max-width:1100px;margin:0 auto}
-    nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-    nav button{background:var(--muted);color:var(--text);border:none;padding:10px 12px;border-radius:10px;cursor:pointer}
-    nav button.active{background:var(--accent);color:#001018}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
-    .card{background:var(--card);border:1px solid #2b3555;border-radius:14px;padding:14px}
-    h2{font-size:16px;margin:0 0 10px 0}
-    label{font-size:12px;opacity:.9}
-    input,select,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid #2b3555;background:#111a33;color:var(--text);margin-top:6px}
-    table{width:100%;border-collapse:collapse} th,td{padding:8px;border-bottom:1px solid #2b3555;font-size:14px}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
-    .row > *{flex:1 1 200px}
-    .badge{padding:3px 8px;border-radius:999px;background:#0f203f;border:1px solid #2b3555;font-size:12px}
-    .hint{font-size:12px;opacity:.8}
-    footer{opacity:.7;font-size:12px;padding:24px;text-align:center}
-    canvas{background:#0f1a34;border-radius:12px;padding:8px}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fig Operations Manager</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
-  <header>
-    <h1>🌳 Fig Ops — Saplings Manager</h1>
-    <span class="pill" id="syncStatus">offline</span>
-  </header>
+    <header>
+        <h1>Fig Operations Manager</h1>
+    </header>
 
-  <main>
-    <nav>
-      <button data-tab="dashboard" class="active">Dashboard</button>
-      <button data-tab="lots">Lots</button>
-      <button data-tab="orders">Orders</button>
-      <button data-tab="customers">Customers</button>
-      <button data-tab="analytics">Analytics</button>
-      <button data-tab="settings">Settings</button>
+    <!-- Top navigation tabs -->
+    <nav class="tabs">
+        <button class="tab-link" data-tab="dashboard">Dashboard</button>
+        <button class="tab-link" data-tab="varieties">Varieties</button>
+        <button class="tab-link" data-tab="lots">Lots</button>
+        <button class="tab-link" data-tab="customers">Customers</button>
+        <button class="tab-link" data-tab="orders">Orders</button>
+        <button class="tab-link" data-tab="analytics">Analytics</button>
+        <button class="tab-link" data-tab="settings">Settings</button>
     </nav>
 
-    <section id="dashboard" class="tab">
-      <div class="grid">
-        <div class="card">
-          <h2>KPIs (last 30 days)</h2>
-          <div class="row">
-            <div><div class="hint">Rooting Success %</div><div id="kpi_rooting" class="badge"></div></div>
-            <div><div class="hint">Delivery Success %</div><div id="kpi_delivery" class="badge"></div></div>
-            <div><div class="hint">Return Rate %</div><div id="kpi_returns" class="badge"></div></div>
-            <div><div class="hint">Orders</div><div id="kpi_orders" class="badge"></div></div>
-          </div>
-        </div>
-        <div class="card">
-          <h2>Today’s Actions</h2>
-          <ul id="todo"></ul>
-        </div>
-        <div class="card">
-          <h2>Live Chart — Orders</h2>
-          <canvas id="ordersChart" height="160"></canvas>
-        </div>
-      </div>
-    </section>
+    <main>
+        <!-- Dashboard overview -->
+        <section id="dashboard" class="tab-section">
+            <h2>Dashboard</h2>
+            <div id="dashboard-summary" class="metrics-container">
+                <!-- Summary cards injected here -->
+            </div>
+        </section>
 
-    <section id="lots" class="tab" hidden>
-      <div class="card">
-        <h2>New Lot</h2>
-        <div class="row">
-          <div><label>Variety<select id="lot_variety"></select></label></div>
-          <div><label>Method<select id="lot_method"><option>short-node</option><option>air-layer</option><option>graft</option></select></label></div>
-          <div><label>Quantity<input id="lot_qty" type="number" min="1" value="20"></label></div>
-          <div><label>Start Date<input id="lot_start" type="date"></label></div>
-        </div>
-        <button id="addLotBtn">Add Lot</button>
-      </div>
-      <div class="card">
-        <h2>Lots</h2>
-        <table id="lotsTable"><thead><tr><th>Lot ID</th><th>Variety</th><th>Method</th><th>Qty</th><th>Start</th><th>Stage</th><th>Success %</th></tr></thead><tbody></tbody></table>
-      </div>
-    </section>
+        <!-- Varieties management -->
+        <section id="varieties" class="tab-section hidden">
+            <h2>Varieties</h2>
+            <div class="form-container" id="variety-form">
+                <h3 id="variety-form-title">Add Variety</h3>
+                <input type="hidden" id="variety-id">
+                <div class="field-row">
+                    <label for="variety-name">Name</label>
+                    <input id="variety-name" type="text" required>
+                </div>
+                <div class="field-row">
+                    <label for="variety-category">Category</label>
+                    <input id="variety-category" type="text">
+                </div>
+                <div class="field-row">
+                    <label for="variety-price">Price per unit</label>
+                    <input id="variety-price" type="number" step="0.01" min="0">
+                </div>
+                <div class="field-row">
+                    <label for="variety-description">Description</label>
+                    <textarea id="variety-description" rows="2"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button id="variety-save" class="primary">Save</button>
+                    <button id="variety-cancel" class="secondary hidden">Cancel</button>
+                </div>
+            </div>
+            <table id="variety-table" class="data-table">
+                <thead>
+                    <tr><th>Name</th><th>Category</th><th>Price</th><th>Description</th><th>Actions</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
 
-    <section id="orders" class="tab" hidden>
-      <div class="card">
-        <h2>New Order</h2>
-        <div class="row">
-          <div><label>Customer<select id="order_customer"></select></label></div>
-          <div><label>Variety<select id="order_variety"></select></label></div>
-          <div><label>Qty<input id="order_qty" type="number" min="1" value="1"></label></div>
-          <div><label>Delivery<select id="order_delivery"><option>Yalidine Office</option><option>Home</option></select></label></div>
-        </div>
-        <button id="addOrderBtn">Add Order</button>
-      </div>
-      <div class="card">
-        <h2>Orders</h2>
-        <table id="ordersTable"><thead><tr><th>Order ID</th><th>Date</th><th>Customer</th><th>Variety</th><th>Qty</th><th>Status</th></tr></thead><tbody></tbody></table>
-      </div>
-    </section>
+        <!-- Lots management -->
+        <section id="lots" class="tab-section hidden">
+            <h2>Lots</h2>
+            <div class="form-container" id="lot-form">
+                <h3 id="lot-form-title">Add Lot</h3>
+                <input type="hidden" id="lot-id">
+                <div class="field-row">
+                    <label for="lot-variety">Variety</label>
+                    <select id="lot-variety"></select>
+                </div>
+                <div class="field-row">
+                    <label for="lot-method">Propagation method</label>
+                    <input id="lot-method" type="text" placeholder="e.g. short node, air-layer">
+                </div>
+                <div class="field-row">
+                    <label for="lot-start">Start date</label>
+                    <input id="lot-start" type="date">
+                </div>
+                <div class="field-row">
+                    <label for="lot-end">End/rooting date</label>
+                    <input id="lot-end" type="date">
+                </div>
+                <div class="field-row">
+                    <label for="lot-cuttings">Cuttings</label>
+                    <input id="lot-cuttings" type="number" min="1">
+                </div>
+                <div class="field-row">
+                    <label for="lot-rooted">Rooted cuttings</label>
+                    <input id="lot-rooted" type="number" min="0">
+                </div>
+                <div class="field-row">
+                    <label for="lot-mix">Mix/media</label>
+                    <input id="lot-mix" type="text" placeholder="e.g. perlite:peat:olive waste">
+                </div>
+                <div class="field-row">
+                    <label for="lot-status">Status</label>
+                    <input id="lot-status" type="text" placeholder="e.g. active, completed">
+                </div>
+                <div class="field-row">
+                    <label for="lot-notes">Notes</label>
+                    <textarea id="lot-notes" rows="2"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button id="lot-save" class="primary">Save</button>
+                    <button id="lot-cancel" class="secondary hidden">Cancel</button>
+                </div>
+            </div>
+            <table id="lot-table" class="data-table">
+                <thead>
+                    <tr><th>ID</th><th>Variety</th><th>Method</th><th>Start</th><th>End</th><th>Cuttings</th><th>Rooted</th><th>Success %</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
 
-    <section id="customers" class="tab" hidden>
-      <div class="card">
-        <h2>New Customer</h2>
-        <div class="row">
-          <div><label>Name<input id="cust_name"></label></div>
-          <div><label>Phone<input id="cust_phone"></label></div>
-          <div><label>Address<textarea id="cust_addr" rows="2"></textarea></label></div>
-        </div>
-        <button id="addCustomerBtn">Add Customer</button>
-      </div>
-      <div class="card">
-        <h2>Customers</h2>
-        <table id="customersTable"><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>City</th></tr></thead><tbody></tbody></table>
-      </div>
-    </section>
+        <!-- Customers management -->
+        <section id="customers" class="tab-section hidden">
+            <h2>Customers</h2>
+            <div class="form-container" id="customer-form">
+                <h3 id="customer-form-title">Add Customer</h3>
+                <input type="hidden" id="customer-id">
+                <div class="field-row">
+                    <label for="customer-name">Name</label>
+                    <input id="customer-name" type="text" required>
+                </div>
+                <div class="field-row">
+                    <label for="customer-phone">Phone</label>
+                    <input id="customer-phone" type="tel">
+                </div>
+                <div class="field-row">
+                    <label for="customer-address">Address</label>
+                    <input id="customer-address" type="text">
+                </div>
+                <div class="field-row">
+                    <label for="customer-note">Note</label>
+                    <textarea id="customer-note" rows="2"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button id="customer-save" class="primary">Save</button>
+                    <button id="customer-cancel" class="secondary hidden">Cancel</button>
+                </div>
+            </div>
+            <table id="customer-table" class="data-table">
+                <thead>
+                    <tr><th>Name</th><th>Phone</th><th>Address</th><th>Note</th><th>Actions</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
 
-    <section id="analytics" class="tab" hidden>
-      <div class="grid">
-        <div class="card">
-          <h2>Rooting Success by Method</h2>
-          <canvas id="rootingChart" height="160"></canvas>
-        </div>
-        <div class="card">
-          <h2>Top Varieties (Orders)</hhed>
-          <canvas id="varietiesChart" height="160"></canvas>
-        </div>
-        <div class="card">
-          <h2>Returns & Delivery</h2>
-          <canvas id="returnsChart" height="160"></canvas>
-        </div>
-      </div>
-    </section>
+        <!-- Orders management -->
+        <section id="orders" class="tab-section hidden">
+            <h2>Orders</h2>
+            <div class="form-container" id="order-form">
+                <h3 id="order-form-title">Add Order</h3>
+                <input type="hidden" id="order-id">
+                <div class="field-row">
+                    <label for="order-date">Date</label>
+                    <input id="order-date" type="date">
+                </div>
+                <div class="field-row">
+                    <label for="order-customer">Customer</label>
+                    <select id="order-customer"></select>
+                </div>
+                <div id="order-items-container" class="items-container">
+                    <h4>Items</h4>
+                    <table id="order-items-table" class="items-table">
+                        <thead>
+                            <tr><th>Variety</th><th>Quantity</th><th>Unit price</th><th>Subtotal</th><th>Remove</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <button id="add-item" type="button">Add Item</button>
+                </div>
+                <div class="field-row">
+                    <label>Total</label>
+                    <span id="order-total">0.00</span>
+                </div>
+                <div class="field-row">
+                    <label for="order-status">Status</label>
+                    <input id="order-status" type="text" placeholder="e.g. pending, delivered">
+                </div>
+                <div class="field-row">
+                    <label for="order-note">Note</label>
+                    <textarea id="order-note" rows="2"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button id="order-save" class="primary">Save</button>
+                    <button id="order-cancel" class="secondary hidden">Cancel</button>
+                </div>
+            </div>
+            <table id="order-table" class="data-table">
+                <thead>
+                    <tr><th>ID</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
 
-    <section id="settings" class="tab" hidden>
-      <div class="card">
-        <h2>Repository & Token</h2>
-        <div class="row">
-          <div><label>Owner<input id="repo_owner" placeholder="your-github-username"></label></div>
-          <div><label>Repo<input id="repo_name" placeholder="your-repo-name"></label></div>
-          <div><label>Branch<input id="repo_branch" value="main"></label></div>
-        </div>
-        <label>GitHub Fine-Grained Token (repo:contents)<input id="gh_token" type="password" placeholder="paste token (stored locally)"></label>
-        <p class="hint">Token is stored only in your device (localStorage). The app writes JSONL files via GitHub API (<code>PUT /contents</code>).</p>
-        <button id="saveRepoBtn">Save Settings</button>
-        <button id="syncAllBtn">Sync Now</button>
-      </div>
-      <div class="card">
-        <h2>Export / Import</h2>
-        <button id="exportBtn">Export All (json)</button>
-        <input type="file" id="importFile" accept=".json" />
-        <p class="hint">Data format is portable JSONL under /data — usable by any other app.</p>
-      </div>
-    </section>
-  </main>
+        <!-- Analytics view -->
+        <section id="analytics" class="tab-section hidden">
+            <h2>Analytics</h2>
+            <div id="analytics-content" class="analytics-container">
+                <!-- Charts and metrics injected here -->
+            </div>
+        </section>
 
-  <footer>© Fig Ops — static, local-first, GitHub-synced • Charting via Chart.js • PWA enabled</footer>
+        <!-- Settings view -->
+        <section id="settings" class="tab-section hidden">
+            <h2>Settings</h2>
+            <div class="form-container" id="settings-form">
+                <div class="field-row">
+                    <label for="gh-owner">GitHub Owner/User</label>
+                    <input id="gh-owner" type="text" placeholder="e.g. my-user">
+                </div>
+                <div class="field-row">
+                    <label for="gh-repo">Repository</label>
+                    <input id="gh-repo" type="text" placeholder="e.g. fig-ops">
+                </div>
+                <div class="field-row">
+                    <label for="gh-branch">Branch</label>
+                    <input id="gh-branch" type="text" value="main">
+                </div>
+                <div class="field-row">
+                    <label for="gh-token">Personal Access Token</label>
+                    <input id="gh-token" type="password" autocomplete="new-password">
+                </div>
+                <div class="form-actions">
+                    <button id="settings-save" class="primary">Save Settings</button>
+                </div>
+            </div>
+        </section>
+    </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module" src="modules/app.js"></script>
+    <!-- Main JS entrypoint -->
+    <script type="module" src="modules/app.js"></script>
 </body>
 </html>
