@@ -50,8 +50,9 @@
           </label>
         </div>
         <div class="row">
-<button id="saveVarietyBtn" type="button" data-action="save-variety">Save Variety</button>
-<button id="resetFormBtn" type="button" class="ghost">Reset</button>
+          <button id="saveVarietyBtn" type="button" data-action="save-variety">Save Variety</button>
+          <button id="resetFormBtn" type="button" class="ghost">Reset</button>
+        </div>
         <div class="hint" id="editHint" hidden>Editing: <span id="editingId"></span></div>
       </div>
 
@@ -94,63 +95,18 @@
           </label>
         </div>
         <div class="row">
-          <button id="saveRepoBtn">Save Settings</button>
-          <button id="syncBtn">Sync to GitHub</button>
-          <button id="reloadBtn" class="ghost">Reload from GitHub</button>
+          <button id="saveRepoBtn" type="button">Save Settings</button>
+          <button id="syncBtn" type="button">Sync to GitHub</button>
+          <button id="reloadBtn" type="button" class="ghost">Reload from GitHub</button>
         </div>
         <p class="hint">Data lives in <code>data/varieties.jsonl</code> as portable JSON Lines. If the repo is private, syncing requires a token.</p>
       </div>
     </section>
   </main>
 
-  <footer>Step 1 complete — Varieties CRUD + JSONL + optional GitHub sync</footer>
+  <div id="debug" style="position:fixed;bottom:8px;left:8px;background:#111a33;color:#eaeaea;padding:6px 10px;border-radius:8px;font:12px system-ui;opacity:.9"></div>
+  <footer>Step 1 — Varieties CRUD + JSONL + safe GitHub sync</footer>
 
-  <script type="module">
-    import { Storage } from './modules/storage.js';
-    import { initVarietiesUI } from './modules/varieties.js';
-
-    const tabs = document.querySelectorAll('nav.tabs button');
-    const sections = document.querySelectorAll('main .tab');
-    tabs.forEach(btn => btn.addEventListener('click', () => {
-      tabs.forEach(b => b.classList.remove('active')); btn.classList.add('active');
-      sections.forEach(s => s.hidden = s.id !== btn.dataset.tab);
-    }));
-
-    const store = new Storage();
-    await store.loadAll();
-    document.getElementById('status').textContent = store.isConfigured() ? 'ready' : 'offline';
-
-    initVarietiesUI(store);
-
-    // Settings handlers
-    const ow = document.getElementById('gh_owner');
-    const rp = document.getElementById('gh_repo');
-    const br = document.getElementById('gh_branch');
-    const tk = document.getElementById('gh_token');
-    // preload existing
-    if (store.repo.owner) ow.value = store.repo.owner;
-    if (store.repo.name) rp.value = store.repo.name;
-    if (store.repo.branch) br.value = store.repo.branch;
-    if (store.repo.token) tk.value = store.repo.token;
-
-    document.getElementById('saveRepoBtn').onclick = () => {
-      store.setRepo({ owner: ow.value.trim(), name: rp.value.trim(), branch: br.value.trim(), token: tk.value.trim() });
-      document.getElementById('status').textContent = store.isConfigured() ? 'ready' : 'offline';
-      alert('Saved.');
-    };
-    document.getElementById('syncBtn').onclick = async () => {
-      document.getElementById('status').textContent = 'syncing...';
-      await store.saveKey('varieties'); // push local changes
-      document.getElementById('status').textContent = 'synced';
-      alert('Synced to GitHub (if configured).');
-    };
-    document.getElementById('reloadBtn').onclick = async () => {
-      await store.loadKey('varieties'); // reload from repo/raw
-      alert('Reloaded from GitHub (if configured).');
-      window.location.reload();
-    };
-
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-  </script>
+  <script type="module" defer src="modules/app.js"></script>
 </body>
 </html>
