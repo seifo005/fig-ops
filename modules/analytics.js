@@ -1,50 +1,101 @@
-export class Analytics{
-  constructor(store){ this.store = store; }
-  kpis30d(){
-    const since = Date.now() - 30*24*3600*1000;
-    const orders = this.store.state.orders.filter(o=> new Date(o.date).getTime()>=since);
-    const delivered = orders.filter(o=>o.delivered).length;
-    const returned = orders.filter(o=>o.returned).length;
-    const rootLots = this.store.state.lots.filter(l=>l.success>0);
-    const avgSuccess = rootLots.length? Math.round(rootLots.reduce((a,b)=>a+b.success,0)/rootLots.length) : 0;
-    return {
-      orders: orders.length,
-      deliverySuccess: orders.length? Math.round(100*delivered/orders.length):0,
-      returnRate: orders.length? Math.round(100*returned/orders.length):0,
-      rootingSuccess: avgSuccess
-    };
-  }
-  ordersTimeSeries(){
-    const map = new Map();
-    for(const o of this.store.state.orders){
-      map.set(o.date, (map.get(o.date)||0) + 1);
+// analytics.js - compute summary statistics and datasets for charts
+import { state, computeLotSuccess } from './storage.js';
+
+/**
+ * Compute general summary metrics for dashboard and analytics.
+ */
+export function computeSummary() {
+  const totalVarieties = state.varieties.length;
+  const totalCustomers = state.customers.length;
+  const totalLots = state.lots.length;
+  const totalOrders = state.orders.length;
+  // Total revenue = sum of order totals
+  let totalRevenue = 0;
+  state.orders.forEach(order => {
+    totalRevenue += order.total || 0;
+  });
+  // Average lot success rate
+  let successSum = 0;
+  state.lots.forEach(lot => {
+    successSum += computeLotSuccess(lot);
+  });
+  const avgSuccess = totalLots > 0 ? Math.round((successSum / totalLots) * 100) / 100 : 0;
+  return {
+    totalVarieties,
+    totalCustomers,
+    totalLots,
+    totalOrders,
+    totalRevenue,
+    avgSuccess
+  };
+}
+
+/**
+ * Compute orders count and revenue aggregated by month.
+ * Returns an object {labels: ["YYYY-MM"], orders: [], revenue: []}
+ */
+export function computeOrdersByMonth() {
+  const map = {};
+  state.orders.forEach(order => {
+    const date = order.date || order.createdAt;
+    if (!date) return;
+    const month = date.slice(0, 7); // YYYY-MM
+    if (!map[month]) {
+      map[month] = { orders: 0, revenue: 0 };
     }
-    const entries = [...map.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
-    return { labels: entries.map(e=>e[0]), data: entries.map(e=>e[1]) };
-  }
-  rootingByMethod(){
-    const map = new Map();
-    for(const l of this.store.state.lots){
-      const prev = map.get(l.method) || {count:0, success:0};
-      prev.count += 1; prev.success += (l.success||0);
-      map.set(l.method, prev);
-    }
-    const labels=[], data=[];
-    for(const [m,vals] of map){ labels.push(m); data.push(Math.round(vals.success/vals.count||0)); }
-    return {labels, data};
-  }
-  ordersByVariety(){
-    const map = new Map();
-    for(const o of this.store.state.orders){
-      map.set(o.variety, (map.get(o.variety)||0) + o.qty);
-    }
-    const entries = [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10);
-    return { labels: entries.map(e=>e[0]), data: entries.map(e=>e[1]) };
-  }
-  returnsSeries(){
-    const labels=['Delivered','Returned'];
-    const delivered=this.store.state.orders.filter(o=>o.delivered).length;
-    const returned=this.store.state.orders.filter(o=>o.returned).length;
-    return {labels, data:[delivered, returned]};
-  }
+    map[month].orders += 1;
+    map[month].revenue += order.total || 0;
+  });
+  const labels = Object.keys(map).sort();
+  return {
+    labels,
+    orders: labels.map(m => map[m].orders),
+    revenue: labels.map(m => Math.round(map[m].revenue * 100) / 100)
+  };
+}
+
+/**
+ * Compute top varieties by quantity sold.
+ * Returns an array of {name, quantity} sorted descending.
+ */
+export function computeTopVarieties(limit = 5) {
+  const countMap = {};
+  state.orders.forEach(order => {
+    (order.items || []).forEach(item => {
+      const varId = item.varietyId;
+      if (!countMap[varId]) countMap[varId] = 0;
+      countMap[varId] += parseFloat(item.quantity) || 0;
+    });
+  });
+  // Map to names
+  const nameMap = {};
+  state.varieties.forEach(v => nameMap[v.id] = v.name);
+  const arr = Object.keys(countMap).map(varId => ({
+    id: varId,
+    name: nameMap[varId] || varId,
+    quantity: countMap[varId]
+  }));
+  arr.sort((a, b) => b.quantity - a.quantity);
+  return arr.slice(0, limit);
+}
+
+/**
+ * Compute average success rate per propagation method.
+ * Returns an object {labels: [], success: []}
+ */
+export function computeSuccessByMethod() {
+  const map = {};
+  state.lots.forEach(lot => {
+    const method = lot.method || 'Unknown';
+    if (!map[method]) map[method] = { sum: 0, count: 0 };
+    map[method].sum += computeLotSuccess(lot);
+    map[method].count += 1;
+  });
+  const labels = Object.keys(map);
+  const success = labels.map(m => {
+    const entry = map[m];
+    const avg = entry.count ? Math.round((entry.sum / entry.count) * 100) / 100 : 0;
+    return avg;
+  });
+  return { labels, success };
 }
