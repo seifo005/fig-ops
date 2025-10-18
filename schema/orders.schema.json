@@ -5,21 +5,34 @@
     "id": {
       "type": "string"
     },
-    "name": {
+    "date": {
       "type": "string"
     },
-    "phone": {
+    "customer_id": {
       "type": "string"
     },
-    "address": {
+    "variety": {
       "type": "string"
     },
-    "city": {
+    "qty": {
+      "type": "number"
+    },
+    "status": {
       "type": "string"
+    },
+    "delivered": {
+      "type": "boolean"
+    },
+    "returned": {
+      "type": "boolean"
     }
   },
   "required": [
     "id",
-    "name"
+    "date",
+    "customer_id",
+    "variety",
+    "qty",
+    "status"
   ]
 }

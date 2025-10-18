@@ -2,24 +2,14 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
-    "id": {
-      "type": "string"
-    },
     "name": {
       "type": "string"
     },
-    "phone": {
-      "type": "string"
-    },
-    "address": {
-      "type": "string"
-    },
-    "city": {
+    "notes": {
       "type": "string"
     }
   },
   "required": [
-    "id",
     "name"
   ]
 }

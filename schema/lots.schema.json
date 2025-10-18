@@ -5,21 +5,30 @@
     "id": {
       "type": "string"
     },
-    "name": {
+    "variety": {
       "type": "string"
     },
-    "phone": {
+    "method": {
       "type": "string"
     },
-    "address": {
+    "qty": {
+      "type": "number"
+    },
+    "start": {
       "type": "string"
     },
-    "city": {
+    "stage": {
       "type": "string"
+    },
+    "success": {
+      "type": "number"
     }
   },
   "required": [
     "id",
-    "name"
+    "variety",
+    "method",
+    "qty",
+    "start"
   ]
 }
