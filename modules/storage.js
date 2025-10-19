@@ -275,4 +275,24 @@ async deleteOrder(id){
     this.state.lots = (this.state.lots||[]).filter(x => x.id !== id);
     await this.saveKey('lots');
   }
+
+  // How many saplings are available to sell for a variety.
+// rooted = sum of rooted pieces across all lots for that variety
+// reserved = quantities already used in orders with statuses that "reserve" stock
+// (confirmed, paid, shipped). Draft & cancelled do NOT reserve.
+availableFor(varietyId, excludeOrderId = null){
+  const rooted = (this.state.lots||[])
+    .filter(l => l.variety_id === varietyId)
+    .reduce((s,l) => s + Number(l.qty_rooted||0), 0);
+
+  const reserveStatuses = new Set(['confirmed','paid','shipped']);
+  const reserved = (this.state.orders||[])
+    .filter(o => o.id !== excludeOrderId && reserveStatuses.has((o.status||'').toLowerCase()))
+    .reduce((sum, o) => sum + (o.items||[])
+      .filter(it => it.variety_id === varietyId)
+      .reduce((s,it) => s + Number(it.qty||0), 0), 0);
+
+  return Math.max(rooted - reserved, 0);
+}
+  
 }
