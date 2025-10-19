@@ -1,9 +1,9 @@
-// modules/storage.js — robust cache + safe GitHub sync (merge + guard)
+// modules/storage.js — local-first + safe GitHub sync (merge + guard)
 export class Storage{
   constructor(){
     this.repo  = JSON.parse(localStorage.getItem('repo')||'{}');
-    this.paths = { varieties: 'data/varieties.jsonl' };
-    this.state = { varieties: [] };
+    this.paths = { varieties: 'data/varieties.jsonl', lots: 'data/lots.jsonl' };
+    this.state = { varieties: [], lots: [] };
   }
 
   isConfigured(){ return !!(this.repo.owner && this.repo.name && this.repo.branch); }
@@ -20,6 +20,13 @@ export class Storage{
     const n = (nums.length ? Math.max(...nums) : 0) + 1;
     return `${prefix}-${String(n).padStart(4,'0')}`;
   }
+  nextLotId(prefix='LOT'){
+    const nums = (this.state.lots||[])
+      .map(v => (v.id||'').startsWith(prefix) ? Number((v.id||'').split('-')[1]) : 0)
+      .filter(n => !Number.isNaN(n));
+    const n = (nums.length ? Math.max(...nums) : 0) + 1;
+    return `${prefix}-${String(n).padStart(4,'0')}`;
+  }
 
   parseJsonl(txt){
     if(!txt || !String(txt).trim()) return [];
@@ -28,8 +35,8 @@ export class Storage{
   toJsonl(arr){ return (arr||[]).map(o=>JSON.stringify(o)).join('\n') + '\n'; }
 
   async loadAll(){
-    try { await this.loadKey('varieties'); }
-    catch(e){ console.warn('loadAll error -> cache fallback', e); this.state.varieties = this._getCache('varieties') || []; }
+    try { await this.loadKey('varieties'); } catch(e){ this.state.varieties = this._getCache('varieties') || []; }
+    try { await this.loadKey('lots'); } catch(e){ this.state.lots = this._getCache('lots') || []; }
 
     if(this.state.varieties.length === 0){
       const now = new Date().toISOString();
@@ -38,6 +45,9 @@ export class Storage{
         { id: 'VAR-0002', name: 'BNR',           category: 'premium', default_price: 55, status: 'active', tags:['productive'], description:'Productive; collector favorite.', created_at:now }
       ];
       await this.saveKey('varieties');
+    }
+    if(this.state.lots.length === 0){
+      await this.saveKey('lots');
     }
   }
 
@@ -88,69 +98,57 @@ export class Storage{
     return null;
   }
 
-  // Replace the entire saveKey(key) with this:
-async saveKey(key){
-  const arr = this.state[key] || [];
-  const jsonl = this.toJsonl(arr);
+  async saveKey(key){
+    const arr = this.state[key] || [];
+    const jsonl = this.toJsonl(arr);
+    this._setCache(key, jsonl);
 
-  // 1) Always update local cache so refresh won't lose data
-  this._setCache(key, jsonl);
+    if(!this.isConfigured() || !this.repo.token) return;
 
-  // 2) If no GitHub config/token, stop here (local-only mode)
-  if (!this.isConfigured() || !this.repo.token) return;
+    if (key === 'varieties' && arr.length === 0){
+      console.warn('[Guard] Refusing to overwrite remote with empty varieties.');
+      return;
+    }
 
-  // Safety: don't wipe remote with empty varieties by accident
-  if (key === 'varieties' && arr.length === 0) {
-    console.warn('[Guard] Refusing to overwrite remote with empty varieties.');
-    return;
-  }
+    const path = this.paths[key];
 
-  const path = this.paths[key];
-
-  // Helper to fetch current SHA (or undefined if file doesn't exist)
-  const getSha = async () => {
-    const r = await fetch(
-      `https://api.github.com/repos/${this.repo.owner}/${this.repo.name}/contents/${path}?ref=${this.repo.branch}`,
-      { headers:{ Authorization:`Bearer ${this.repo.token}` } }
-    );
-    if (!r.ok) return undefined;
-    const meta = await r.json();
-    return meta.sha;
-  };
-
-  // Actual PUT
-  const putWithSha = async (sha) => {
-    const body = {
-      message: `update ${path}`,
-      content: btoa(unescape(encodeURIComponent(jsonl))),
-      branch: this.repo.branch
+    const getSha = async () => {
+      const r = await fetch(
+        `https://api.github.com/repos/${this.repo.owner}/${this.repo.name}/contents/${path}?ref=${this.repo.branch}`,
+        { headers:{ Authorization:`Bearer ${this.repo.token}` } }
+      );
+      if (!r.ok) return undefined;
+      const meta = await r.json();
+      return meta.sha;
     };
-    if (sha) body.sha = sha;
 
-    const putRes = await fetch(
-      `https://api.github.com/repos/${this.repo.owner}/${this.repo.name}/contents/${path}`,
-      { method:'PUT', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${this.repo.token}` }, body: JSON.stringify(body) }
-    );
-    return putRes;
-  };
+    const putWithSha = async (sha) => {
+      const body = {
+        message: `update ${path}`,
+        content: btoa(unescape(encodeURIComponent(jsonl))),
+        branch: this.repo.branch
+      };
+      if (sha) body.sha = sha;
 
-  // 3) First attempt
-  let sha = await getSha();
-  let res = await putWithSha(sha);
+      const putRes = await fetch(
+        `https://api.github.com/repos/${this.repo.owner}/${this.repo.name}/contents/${path}`,
+        { method:'PUT', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${this.repo.token}` }, body: JSON.stringify(body) }
+      );
+      return putRes;
+    };
 
-  // 4) If conflict (409), re-fetch SHA and retry once
-  if (res.status === 409) {
-    console.warn('[FigOps] 409 conflict — refetching sha and retrying…');
-    sha = await getSha();
-    res = await putWithSha(sha);
+    let sha = await getSha();
+    let res = await putWithSha(sha);
+    if (res.status == 409){
+      sha = await getSha();
+      res = await putWithSha(sha);
+    }
+    if (!res.ok){
+      const t = await res.text().catch(()=>'(no body)');
+      console.error('GitHub save failed', res.status, t);
+      throw new Error('GitHub save failed');
+    }
   }
-
-  if (!res.ok) {
-    const txt = await res.text().catch(()=>'(no body)');
-    console.error('GitHub save failed', res.status, txt);
-    throw new Error('GitHub save failed');
-  }
-}
 
   async syncKey(key){
     const path = this.paths[key];
@@ -180,9 +178,26 @@ async saveKey(key){
     this.state.varieties = a;
     await this.saveKey('varieties');
   }
-
   async deleteVariety(id){
     this.state.varieties = (this.state.varieties||[]).filter(v => v.id !== id);
     await this.saveKey('varieties');
+  }
+
+  computeLotSuccess(l){
+    const t = Number(l.qty_total||0), r = Number(l.qty_rooted||0);
+    if (t<=0) return 0;
+    return Math.round((r*100)/t);
+  }
+  async upsertLot(l){
+    if(!l.id) l.id = this.nextLotId();
+    const a = this.state.lots || [];
+    const i = a.findIndex(x => x.id === l.id);
+    if(i >= 0) a[i] = l; else a.push(l);
+    this.state.lots = a;
+    await this.saveKey('lots');
+  }
+  async deleteLot(id){
+    this.state.lots = (this.state.lots||[]).filter(x => x.id !== id);
+    await this.saveKey('lots');
   }
 }

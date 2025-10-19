@@ -1,6 +1,7 @@
 // modules/app.js
 import { Storage } from './storage.js';
 import { initVarietiesUI } from './varieties.js';
+import { initLotsUI } from './lots.js';
 
 function wireTabs(){
   const tabs = document.querySelectorAll('nav.tabs button');
@@ -30,7 +31,8 @@ async function boot(){
     if (statusEl) statusEl.textContent = store.isConfigured() ? 'ready' : 'offline';
 
     initVarietiesUI(store);
-    debug('Varieties UI ready.');
+    initLotsUI(store);
+    debug('UIs ready.');
 
     const ow = document.getElementById('gh_owner');
     const rp = document.getElementById('gh_repo');
@@ -53,6 +55,7 @@ async function boot(){
     if (syncBtn) syncBtn.onclick = async () => {
       debug('Syncing…');
       await store.syncKey('varieties');
+      await store.syncKey('lots');
       if (statusEl) statusEl.textContent = 'synced';
       alert('Synced (merged local+remote).');
       debug('Synced.');
@@ -61,6 +64,7 @@ async function boot(){
     const reloadBtn = document.getElementById('reloadBtn');
     if (reloadBtn) reloadBtn.onclick = async () => {
       await store.loadKey('varieties');
+      await store.loadKey('lots');
       alert('Reloaded (if configured).');
       window.location.reload();
     };
