@@ -17,6 +17,8 @@
     <nav class="tabs">
       <button data-tab="varieties" class="active">Varieties</button>
       <button data-tab="lots">Lots</button>
+      <button data-tab="customers">Customers</button>
+      <button data-tab="orders">Orders</button>
       <button data-tab="settings">Settings</button>
     </nav>
 
@@ -155,6 +157,99 @@
         </div>
       </div>
     </section>
+
+    <section id="customers" class="tab" hidden>
+  <div class="card">
+    <h2>Add / Edit Customer</h2>
+    <div class="grid">
+      <label>Name <input id="c_name" placeholder="e.g., Ahmed Ben Ali"></label>
+      <label>Phone <input id="c_phone" placeholder="+213 ..."></label>
+      <label>Email <input id="c_email" type="email" placeholder="name@email.com"></label>
+      <label>City/Address <input id="c_addr" placeholder="Setif, DZ"></label>
+      <label>Notes <textarea id="c_notes" rows="2" placeholder="preferences, delivery details"></textarea></label>
+    </div>
+    <div class="row">
+      <button id="saveCustomerBtn" type="button">Save Customer</button>
+      <button id="resetCustomerBtn" type="button" class="ghost">Reset</button>
+    </div>
+    <div class="hint" id="c_edit_hint" hidden>Editing: <span id="c_editing_id"></span></div>
+  </div>
+
+  <div class="card">
+    <h2>Customers List</h2>
+    <div class="table-wrap">
+      <table id="customersTable">
+        <thead>
+          <tr>
+            <th>ID</th><th>Name</th><th>Phone</th><th>Email</th><th>City</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+    <section id="orders" class="tab" hidden>
+  <div class="card">
+    <h2>Add / Edit Order</h2>
+    <div class="grid">
+      <label>Customer
+        <select id="o_customer"></select>
+      </label>
+      <label>Date
+        <input id="o_date" type="date">
+      </label>
+      <label>Status
+        <select id="o_status">
+          <option value="draft">Draft</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="paid">Paid</option>
+          <option value="shipped">Shipped</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </label>
+      <label>Notes
+        <textarea id="o_notes" rows="2" placeholder="shipping method, etc."></textarea>
+      </label>
+    </div>
+
+    <h3>Line Items</h3>
+    <div class="table-wrap">
+      <table id="o_items" style="min-width:720px">
+        <thead>
+          <tr><th>#</th><th>Variety</th><th>Qty</th><th>Unit Price</th><th>Subtotal</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="row">
+      <button id="addItemBtn" type="button">+ Add Item</button>
+      <div style="margin-left:auto;font-weight:600">Total: <span id="o_total">0</span></div>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <button id="saveOrderBtn" type="button">Save Order</button>
+      <button id="resetOrderBtn" type="button" class="ghost">Reset</button>
+      <button id="printOrderBtn" type="button" class="ghost">Print</button>
+    </div>
+    <div class="hint" id="o_edit_hint" hidden>Editing: <span id="o_editing_id"></span></div>
+  </div>
+
+  <div class="card">
+    <h2>Orders List</h2>
+    <div class="table-wrap">
+      <table id="ordersTable">
+        <thead>
+          <tr>
+            <th>ID</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
     <section id="settings" class="tab" hidden>
       <div class="card">
