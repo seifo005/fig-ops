@@ -36,44 +36,38 @@ export function initVarietiesUI(store){
 
   function resetForm(){
     currentId = null;
-    if (nameEl)   nameEl.value = '';
-    if (catEl)    catEl.value = 'workhorse';
-    if (priceEl)  priceEl.value = '';
-    if (statusEl) statusEl.value = 'active';
-    if (tagsEl)   tagsEl.value = '';
-    if (descEl)   descEl.value = '';
-    if (editHint) editHint.hidden = true;
-    if (editingId) editingId.textContent = '';
+    nameEl.value=''; catEl.value='workhorse'; priceEl.value='';
+    statusEl.value='active'; tagsEl.value=''; descEl.value='';
+    editHint.hidden = true; editingId.textContent='';
   }
 
   function loadToForm(v){
     currentId = v.id;
-    if (nameEl)   nameEl.value = v.name||'';
-    if (catEl)    catEl.value = v.category||'workhorse';
-    if (priceEl)  priceEl.value = v.default_price ?? '';
-    if (statusEl) statusEl.value = v.status||'active';
-    if (tagsEl)   tagsEl.value = (v.tags||[]).join(', ');
-    if (descEl)   descEl.value = v.description||'';
-    if (editHint) editHint.hidden = false;
-    if (editingId) editingId.textContent = v.id;
+    nameEl.value = v.name||'';
+    catEl.value = v.category||'workhorse';
+    priceEl.value = v.default_price ?? '';
+    statusEl.value = v.status||'active';
+    tagsEl.value = (v.tags||[]).join(', ');
+    descEl.value = v.description||'';
+    editHint.hidden = false; editingId.textContent = v.id;
   }
 
   async function saveVariety(){
     try{
       const now = new Date().toISOString();
       const v = {
-        id: currentId,
-        name: (nameEl?.value || '').trim(),
-        category: catEl?.value || 'workhorse',
-        default_price: Number(priceEl?.value || 0),
-        status: statusEl?.value || 'active',
-        tags: (tagsEl?.value || '').split(',').map(t=>t.trim()).filter(Boolean),
-        description: (descEl?.value || '').trim(),
+        id: currentId, // keep same ID when editing
+        name: (nameEl.value || '').trim(),
+        category: catEl.value || 'workhorse',
+        default_price: Number(priceEl.value || 0),
+        status: statusEl.value || 'active',
+        tags: (tagsEl.value || '').split(',').map(t=>t.trim()).filter(Boolean),
+        description: (descEl.value || '').trim(),
         updated_at: now
       };
       if (!v.id) v.created_at = now;
 
-      if (!v.name) { alert('Name is required.'); nameEl?.focus(); return; }
+      if (!v.name) { alert('Name is required.'); nameEl.focus(); return; }
       await store.upsertVariety(v);
       resetForm(); render();
       const dbg = document.getElementById('debug'); if (dbg) dbg.textContent = 'Saved: ' + (v.id || '(new)');
@@ -83,13 +77,8 @@ export function initVarietiesUI(store){
     }
   }
 
-  if (saveBtn) saveBtn.addEventListener('click', (e)=>{ e.preventDefault(); saveVariety(); });
-  if (resetBtn) resetBtn.addEventListener('click', (e)=>{ e.preventDefault(); resetForm(); });
-
-  document.addEventListener('click', (e)=>{
-    const target = e.target.closest('[data-action="save-variety"]');
-    if (target) { e.preventDefault(); saveVariety(); }
-  });
+  saveBtn.addEventListener('click', (e)=>{ e.preventDefault(); saveVariety(); });
+  resetBtn.addEventListener('click', (e)=>{ e.preventDefault(); resetForm(); });
 
   if (tableBody) tableBody.addEventListener('click', async (e) => {
     const btn = e.target.closest('button'); if(!btn) return;
