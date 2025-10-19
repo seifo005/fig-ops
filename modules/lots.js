@@ -94,10 +94,10 @@ export function initLotsUI(store){
       check_date: check.value,
       qty_total: Number(qtyT.value||0),
       qty_rooted: Number(qtyR.value||0),
-      mix: mix.value.trim(),
+      mix: (mix.value||'').trim(),
       temp: temp.value? Number(temp.value): undefined,
       humidity: hum.value? Number(hum.value): undefined,
-      notes: notes.value.trim(),
+      notes: (notes.value||'').trim(),
       updated_at: now
     };
     if(!lot.id) lot.created_at = now;
@@ -105,18 +105,27 @@ export function initLotsUI(store){
     resetForm(); render();
   }
 
+  // Direct listeners
   if (qtyT) qtyT.oninput = success; 
   if (qtyR) qtyR.oninput = success;
-
   if (save) save.addEventListener('click', e=>{ e.preventDefault(); saveLot(); });
   if (reset) reset.addEventListener('click', e=>{ e.preventDefault(); resetForm(); });
 
+  // Delegated fallback so taps always work on mobile
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="save-lot"]');
+    if (!btn) return;
+    e.preventDefault();
+    saveLot();
+  });
+
+  // Table actions
   if (tbody) tbody.addEventListener('click', async e=>{
     const btn = e.target.closest('button'); if(!btn) return;
     const id = btn.dataset.id; const act = btn.dataset.act;
     const found = (store.state.lots||[]).find(x=>x.id===id);
     if(act==='edit' && found) loadToForm(found);
-    if(act==='del' ){
+    if(act==='del'){
       if(confirm('Delete this lot?')){ await store.deleteLot(id); render(); }
     }
   });
@@ -124,4 +133,8 @@ export function initLotsUI(store){
   fillVarieties(); resetForm(); render();
 }
 
-function escape(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+function escape(s){
+  return String(s).replace(/[&<>"']/g, m => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
+  }[m]));
+}
