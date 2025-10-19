@@ -2,6 +2,8 @@
 import { Storage } from './storage.js';
 import { initVarietiesUI } from './varieties.js';
 import { initLotsUI } from './lots.js';
+import { initCustomersUI } from './customers.js';
+import { initOrdersUI } from './orders.js';
 
 function wireTabs(){
   const tabs = document.querySelectorAll('nav.tabs button');
@@ -32,6 +34,8 @@ async function boot(){
 
     initVarietiesUI(store);
     initLotsUI(store);
+    initCustomersUI(store);
+    initOrdersUI(store);
     debug('UIs ready.');
 
     const ow = document.getElementById('gh_owner');
