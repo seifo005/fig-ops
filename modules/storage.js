@@ -2,8 +2,10 @@
 export class Storage{
   constructor(){
     this.repo  = JSON.parse(localStorage.getItem('repo')||'{}');
-    this.paths = { varieties: 'data/varieties.jsonl', lots: 'data/lots.jsonl' };
-    this.state = { varieties: [], lots: [] };
+this.paths = { varieties: 'data/varieties.jsonl', lots: 'data/lots.jsonl',
+               customers: 'data/customers.jsonl', orders: 'data/orders.jsonl' };
+this.state = { varieties: [], lots: [], customers: [], orders: [] };
+
   }
 
   isConfigured(){ return !!(this.repo.owner && this.repo.name && this.repo.branch); }
@@ -28,6 +30,17 @@ export class Storage{
     return `${prefix}-${String(n).padStart(4,'0')}`;
   }
 
+ nextCustomerId(prefix='CUS'){
+  const nums = (this.state.customers||[]).map(v => Number((v.id||'').split('-')[1])||0);
+  const n = (nums.length ? Math.max(...nums) : 0) + 1;
+  return `${prefix}-${String(n).padStart(4,'0')}`;
+}
+nextOrderId(prefix='ORD'){
+  const nums = (this.state.orders||[]).map(v => Number((v.id||'').split('-')[1])||0);
+  const n = (nums.length ? Math.max(...nums) : 0) + 1;
+  return `${prefix}-${String(n).padStart(4,'0')}`;
+} 
+
   parseJsonl(txt){
     if(!txt || !String(txt).trim()) return [];
     return txt.trim().split('\n').map(line => JSON.parse(line));
@@ -37,7 +50,10 @@ export class Storage{
   async loadAll(){
     try { await this.loadKey('varieties'); } catch(e){ this.state.varieties = this._getCache('varieties') || []; }
     try { await this.loadKey('lots'); } catch(e){ this.state.lots = this._getCache('lots') || []; }
+    try { await this.loadKey('customers'); } catch(e){ this.state.customers = this._getCache('customers') || []; }
+try { await this.loadKey('orders'); }    catch(e){ this.state.orders    = this._getCache('orders') || []; }
 
+    
     if(this.state.varieties.length === 0){
       const now = new Date().toISOString();
       this.state.varieties = [
@@ -225,6 +241,36 @@ export class Storage{
     this.state.lots = a;
     await this.saveKey('lots');
   }
+async upsertCustomer(c){
+  if(!c.id) c.id = this.nextCustomerId();
+  const a = this.state.customers || [];
+  const i = a.findIndex(x => x.id === c.id);
+  if(i >= 0) a[i] = c; else a.push(c);
+  this.state.customers = a;
+  await this.saveKey('customers');
+}
+async deleteCustomer(id){
+  this.state.customers = (this.state.customers||[]).filter(x => x.id !== id);
+  await this.saveKey('customers');
+}
+
+  orderTotal(o){
+  return (o.items||[]).reduce((s,it)=> s + Number(it.qty||0)*Number(it.price||0), 0);
+}
+async upsertOrder(o){
+  if(!o.id) o.id = this.nextOrderId();
+  o.total = this.orderTotal(o);
+  const a = this.state.orders || [];
+  const i = a.findIndex(x => x.id === o.id);
+  if(i >= 0) a[i] = o; else a.push(o);
+  this.state.orders = a;
+  await this.saveKey('orders');
+}
+async deleteOrder(id){
+  this.state.orders = (this.state.orders||[]).filter(x => x.id !== id);
+  await this.saveKey('orders');
+}
+  
   async deleteLot(id){
     this.state.lots = (this.state.lots||[]).filter(x => x.id !== id);
     await this.saveKey('lots');
