@@ -52,33 +52,52 @@ export class Storage{
   }
 
   async loadKey(key){
-    const path = this.paths[key];
+  const path = this.paths[key];
 
-    // 1) try relative file
-    try{
-      const r = await fetch(path, { cache:'no-store' });
-      if (r.ok){
-        const txt = await r.text();
-        const arr = this.parseJsonl(txt);
-        this.state[key] = arr;
-        this._setCache(key, this.toJsonl(arr));
-        return;
-      }
-    }catch(_){}
+  // 1) Start with local cache (last saved in your browser)
+  const cachedArr = this._getCache(key) || [];
+  let merged = Array.isArray(cachedArr) ? [...cachedArr] : [];
 
-    // 2) try remote (raw → API)
-    const remote = await this._getRemoteText(path);
-    if (remote !== null){
-      const arr = this.parseJsonl(remote);
-      this.state[key] = arr;
-      this._setCache(key, this.toJsonl(arr));
-      return;
+  // Helper to merge two arrays of records by id (tie -> prefer local)
+  const mergeById = (localArr, remoteArr) => {
+    const byId = new Map();
+    const ts = v => new Date(v?.updated_at || v?.created_at || 0).getTime() || 0;
+
+    for (const r of (remoteArr || [])) byId.set(r.id, r);
+    for (const l of (localArr  || [])) {
+      const old = byId.get(l.id);
+      if (!old) { byId.set(l.id, l); continue; }
+      const tl = ts(l), tr = ts(old);
+      if (tl >= tr) byId.set(l.id, l);  // local wins on newer or tie
     }
+    return [...byId.values()].sort((a,b)=>(a.id||'').localeCompare(b.id||''));
+  };
 
-    // 3) fallback to cache
-    const cached = this._getCache(key);
-    this.state[key] = Array.isArray(cached) ? cached : [];
+  // 2) Try remote (raw file on your site or via GitHub API)
+  const tryRelative = async () => {
+    try {
+      const r = await fetch(path, { cache: 'no-store' });
+      if (r.ok) return await r.text();
+    } catch(_) {}
+    return null;
+  };
+  const tryRemote = async () => {
+    // prefer raw (fast) then API (token/private)
+    const raw = await tryRelative();
+    if (raw !== null) return raw;
+    return await this._getRemoteText(path);
+  };
+
+  const remoteTxt = await tryRemote();
+  if (remoteTxt !== null) {
+    const remoteArr = this.parseJsonl(remoteTxt);
+    merged = mergeById(cachedArr, remoteArr);
   }
+
+  // 3) Persist merged to state + cache (so next refresh keeps your edits)
+  this.state[key] = merged;
+  this._setCache(key, this.toJsonl(merged));
+}
 
   async _getRemoteText(path){
     if (this.isConfigured()){
