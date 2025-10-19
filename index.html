@@ -3,19 +3,20 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Fig Ops — Step 1: Varieties</title>
+  <title>Fig Ops — Varieties & Lots</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header>
-    <h1>🌳 Fig Ops — Varieties</h1>
+    <h1>🌳 Fig Ops — Varieties & Lots</h1>
     <div id="status" class="status">offline</div>
   </header>
 
   <main>
     <nav class="tabs">
       <button data-tab="varieties" class="active">Varieties</button>
+      <button data-tab="lots">Lots</button>
       <button data-tab="settings">Settings</button>
     </nav>
 
@@ -77,6 +78,79 @@
       </div>
     </section>
 
+    <section id="lots" class="tab" hidden>
+      <div class="card">
+        <h2>Add / Edit Lot</h2>
+        <div class="grid">
+          <label>Variety
+            <select id="lot_variety"></select>
+          </label>
+          <label>Method
+            <select id="lot_method">
+              <option value="cuttings">Cuttings</option>
+              <option value="short-node">Short-node</option>
+              <option value="air-layer">Air-layer</option>
+              <option value="tissue-culture">Tissue culture</option>
+            </select>
+          </label>
+          <label>Start Date
+            <input id="lot_start" type="date">
+          </label>
+          <label>Check Date
+            <input id="lot_check" type="date">
+          </label>
+          <label>Total Pieces
+            <input id="lot_qty_total" type="number" min="0" step="1">
+          </label>
+          <label>Rooted Pieces
+            <input id="lot_qty_rooted" type="number" min="0" step="1">
+          </label>
+          <label>Mix (optional)
+            <input id="lot_mix" placeholder="perlite:peat 1:1">
+          </label>
+          <label>Temp °C (optional)
+            <input id="lot_temp" type="number" step="0.1">
+          </label>
+          <label>Humidity % (optional)
+            <input id="lot_humidity" type="number" step="1" min="0" max="100">
+          </label>
+          <label>Notes
+            <textarea id="lot_notes" rows="2" placeholder="any observations"></textarea>
+          </label>
+          <div>
+            <div class="badge" id="lot_success_badge">Success: 0%</div>
+          </div>
+        </div>
+        <div class="row">
+          <button id="saveLotBtn" type="button">Save Lot</button>
+          <button id="resetLotBtn" type="button" class="ghost">Reset</button>
+        </div>
+        <div class="hint" id="lot_edit_hint" hidden>Editing: <span id="lot_editing_id"></span></div>
+      </div>
+
+      <div class="card">
+        <h2>Lots List</h2>
+        <div class="table-wrap">
+          <table id="lotsTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Variety</th>
+                <th>Method</th>
+                <th>Start</th>
+                <th>Check</th>
+                <th>Total</th>
+                <th>Rooted</th>
+                <th>Success %</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section id="settings" class="tab" hidden>
       <div class="card">
         <h2>GitHub Repo (optional for sync)</h2>
@@ -99,13 +173,13 @@
           <button id="syncBtn" type="button">Sync to GitHub</button>
           <button id="reloadBtn" type="button" class="ghost">Reload from GitHub</button>
         </div>
-        <p class="hint">Data lives in <code>data/varieties.jsonl</code> as portable JSON Lines. If the repo is private, syncing requires a token.</p>
+        <p class="hint">Data lives in <code>data/varieties.jsonl</code> and <code>data/lots.jsonl</code>. Use Sync when you want a backup.</p>
       </div>
     </section>
   </main>
 
   <div id="debug" style="position:fixed;bottom:8px;left:8px;background:#111a33;color:#eaeaea;padding:6px 10px;border-radius:8px;font:12px system-ui;opacity:.9"></div>
-  <footer>Step 1 — Varieties CRUD + JSONL + safe GitHub sync</footer>
+  <footer>Step 2 — Lots + Varieties (local-first; safe GitHub sync on demand)</footer>
 
   <script type="module" defer src="modules/app.js"></script>
 </body>
