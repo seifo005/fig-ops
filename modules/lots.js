@@ -41,11 +41,13 @@ export function initLotsUI(store){
     qtyT.value = ''; qtyR.value = '';
     mix.value=''; temp.value=''; hum.value=''; notes.value='';
     hint.hidden = true; hid.textContent='';
+    if (idField) idField.value = '';
     success();
   }
 
   function loadToForm(l){
     currentId = l.id;
+    if (idField) idField.value = l.id;
     selVar.value = l.variety_id || '';
     method.value = l.method || 'cuttings';
     start.value  = l.start_date || '';
