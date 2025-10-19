@@ -54,6 +54,7 @@ export class Storage{
   async loadKey(key){
     const path = this.paths[key];
 
+    // 1) try relative file
     try{
       const r = await fetch(path, { cache:'no-store' });
       if (r.ok){
@@ -65,6 +66,7 @@ export class Storage{
       }
     }catch(_){}
 
+    // 2) try remote (raw → API)
     const remote = await this._getRemoteText(path);
     if (remote !== null){
       const arr = this.parseJsonl(remote);
@@ -73,6 +75,7 @@ export class Storage{
       return;
     }
 
+    // 3) fallback to cache
     const cached = this._getCache(key);
     this.state[key] = Array.isArray(cached) ? cached : [];
   }
@@ -101,9 +104,9 @@ export class Storage{
   async saveKey(key){
     const arr = this.state[key] || [];
     const jsonl = this.toJsonl(arr);
-    this._setCache(key, jsonl);
+    this._setCache(key, jsonl); // always cache first
 
-    if(!this.isConfigured() || !this.repo.token) return;
+    if(!this.isConfigured() || !this.repo.token) return; // local-only mode
 
     if (key === 'varieties' && arr.length === 0){
       console.warn('[Guard] Refusing to overwrite remote with empty varieties.');
@@ -130,16 +133,16 @@ export class Storage{
       };
       if (sha) body.sha = sha;
 
-      const putRes = await fetch(
+      return fetch(
         `https://api.github.com/repos/${this.repo.owner}/${this.repo.name}/contents/${path}`,
         { method:'PUT', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${this.repo.token}` }, body: JSON.stringify(body) }
       );
-      return putRes;
     };
 
     let sha = await getSha();
     let res = await putWithSha(sha);
-    if (res.status == 409){
+    if (res.status === 409){ // conflict → refresh sha and retry once
+      console.warn('[FigOps] 409 conflict — refetching sha and retrying…');
       sha = await getSha();
       res = await putWithSha(sha);
     }
@@ -159,15 +162,22 @@ export class Storage{
     const byId = new Map();
     const stamp = v => new Date(v.updated_at||v.created_at||0).getTime() || 0;
 
-    for (const v of remoteArr) byId.set(v.id, v);
-    for (const v of localArr){
-      const old = byId.get(v.id);
-      if (!old || stamp(v) >= stamp(old)) byId.set(v.id, v);
+    // seed with remote
+    for (const r of remoteArr) byId.set(r.id, r);
+
+    // merge local (newer wins; tie → keep local)
+    for (const l of localArr){
+      const old = byId.get(l.id);
+      if (!old) { byId.set(l.id, l); continue; }
+      const sl = stamp(l), sr = stamp(old);
+      if (sl >= sr) byId.set(l.id, l);
     }
 
     const merged = [...byId.values()].sort((a,b)=>(a.id||'').localeCompare(b.id||''));
     this.state[key] = merged;
-    await this.saveKey(key);
+
+    try { await this.saveKey(key); }
+    catch(err){ console.warn('saveKey failed (kept local state & cache):', err); }
   }
 
   async upsertVariety(v){
