@@ -25,9 +25,75 @@ export function initOrdersUI(store){
       .map(c=>`<option value="${c.id}">${escape(c.name||c.id)}</option>`).join('');
   }
   function fillVarietySelect(sel, value){
-    sel.innerHTML = (store.state.varieties||[])
-      .map(v=>`<option value="${v.id}" ${v.id===value?'selected':''}>${escape(v.name||v.id)}</option>`).join('');
+  sel.innerHTML = (store.state.varieties||[])
+    .map(v=>`<option value="${v.id}" ${v.id===value?'selected':''}>${escape(v.name||v.id)}</option>`).join('');
+}
+
+function itemRow(it = {}){
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="it_idx"></td>
+    <td>
+      <select class="it_var"></select>
+      <div class="avail hint"></div>
+    </td>
+    <td><input class="it_qty" type="number" min="1" step="1" value="${it.qty??1}"></td>
+    <td><input class="it_price" type="number" min="0" step="0.01" value="${it.price??0}"></td>
+    <td class="it_sub">0</td>
+    <td><button class="ghost it_del" type="button">✕</button></td>
+  `;
+  const varSel = tr.querySelector('.it_var');
+  const qty    = tr.querySelector('.it_qty');
+  const price  = tr.querySelector('.it_price');
+  const del    = tr.querySelector('.it_del');
+
+  // choose default variety without duplicating
+  const chosen = new Set([...document.querySelectorAll('#o_items .it_var')].map(s=>s.value));
+  const firstFree = (store.state.varieties||[]).map(v=>v.id).find(id => !chosen.has(id)) || '';
+  fillVarietySelect(varSel, it.variety_id || firstFree);
+
+  // preset price from variety if empty
+  if (!it.price){
+    const v = (store.state.varieties||[]).find(v=>v.id===varSel.value);
+    if (v && v.default_price!=null) price.value = Number(v.default_price);
   }
+
+  // show availability
+  function updateAvail(){
+    const avail = store.availableFor(varSel.value, currentId);
+    tr.querySelector('.avail').textContent = `Avail: ${avail}`;
+  }
+
+  // prevent duplicate varieties in the same order
+  varSel.dataset.prev = varSel.value || '';
+  varSel.onchange = () => {
+    const already = [...document.querySelectorAll('#o_items .it_var')]
+      .filter(s => s !== varSel)
+      .some(s => s.value === varSel.value);
+    if (already){
+      alert('This variety is already in this order. Use one line per variety.');
+      varSel.value = varSel.dataset.prev; // revert
+      return;
+    }
+    varSel.dataset.prev = varSel.value;
+
+    // Prefill price if zero
+    const v = (store.state.varieties||[]).find(v=>v.id===varSel.value);
+    if (v && Number(price.value||0)===0 && v.default_price!=null) price.value = Number(v.default_price);
+    updateAvail(); recalc();
+  };
+
+  qty.oninput = recalc;
+  price.oninput = recalc;
+  del.onclick = () => { tr.remove(); renumber(); recalc(); };
+
+  updateAvail();
+  return tr;
+}
+
+function renumber(){
+  document.querySelectorAll('#o_items tbody tr .it_idx').forEach((cell, i)=> cell.textContent = i+1);
+}
 
   function itemRow(it={}, idx){
     const tr = document.createElement('tr');
@@ -80,21 +146,21 @@ export function initOrdersUI(store){
     recalc();
   }
 
-  function addItem(it={}){
-    const tr = itemRow(it, itemsBody.children.length);
-    itemsBody.appendChild(tr);
-    const qty = tr.querySelector('.it_qty');
-    const price = tr.querySelector('.it_price');
-    const varSel = tr.querySelector('.it_var');
-    const del = tr.querySelector('.it_del');
-    qty.oninput = recalc; price.oninput = recalc; varSel.onchange = (e)=>{
-      // Prefill price on variety change if price is 0
-      const v = (store.state.varieties||[]).find(v=>v.id===varSel.value);
-      if (v && Number(price.value||0)===0 && v.default_price!=null) price.value = Number(v.default_price);
-      recalc();
-    };
-    del.onclick = ()=>{ tr.remove(); recalc(); };
+  function addItem(it = {}){
+  const allIds = (store.state.varieties||[]).map(v=>v.id);
+  const chosen = new Set([...document.querySelectorAll('#o_items .it_var')].map(s=>s.value));
+
+  // if every variety is already in the order, don't add a new line
+  if (allIds.length > 0 && chosen.size >= allIds.length && !it.variety_id){
+    alert('All varieties are already listed in this order.');
+    return;
   }
+
+  const tr = itemRow(it);
+  itemsBody.appendChild(tr);
+  renumber();
+  recalc();
+}
 
   function render(){
     tbody.innerHTML = (store.state.orders||[]).map(o=>{
@@ -116,34 +182,54 @@ export function initOrdersUI(store){
   }
 
   async function saveOrder(){
-    const now = new Date().toISOString();
-    const items = [...itemsBody.querySelectorAll('tr')].map(tr=>{
-      return {
-        variety_id: tr.querySelector('.it_var').value,
-        qty: Number(tr.querySelector('.it_qty').value||0),
-        price: Number(tr.querySelector('.it_price').value||0)
-      };
-    }).filter(it=>it.qty>0);
+  const now = new Date().toISOString();
 
-    if (!selCustomer.value){ alert('Select a customer'); selCustomer.focus(); return; }
-    if (items.length===0){ alert('Add at least one item'); return; }
+  // Build items from rows
+  const items = [...itemsBody.querySelectorAll('tr')].map(tr => ({
+    variety_id: tr.querySelector('.it_var').value,
+    qty:   Number(tr.querySelector('.it_qty').value||0),
+    price: Number(tr.querySelector('.it_price').value||0)
+  })).filter(it => it.qty > 0);
 
-    const prev = currentId ? (store.state.orders||[]).find(x=>x.id===currentId) || {} : {};
-    const o = {
-      ...prev,
-      id: currentId || null,
-      customer_id: selCustomer.value,
-      date: dateEl.value,
-      status: statusEl.value,
-      notes: (notesEl.value||'').trim(),
-      items,
-      updated_at: now
-    };
-    if (!o.id) o.created_at = now;
+  if (!selCustomer.value){ alert('Select a customer'); selCustomer.focus(); return; }
+  if (items.length === 0){ alert('Add at least one item'); return; }
 
-    await store.upsertOrder(o);
-    resetForm(); render();
+  // 1) No duplicate varieties
+  const seen = new Set();
+  for (const it of items){
+    if (seen.has(it.variety_id)){
+      alert('Duplicate variety in this order. Combine quantities into a single line.');
+      return;
+    }
+    seen.add(it.variety_id);
   }
+
+  // 2) Check availability for each variety (exclude current order to allow editing)
+  for (const it of items){
+    const avail = store.availableFor(it.variety_id, currentId);
+    if (it.qty > avail){
+      alert(`Not enough stock for ${it.variety_id}. Available: ${avail}, requested: ${it.qty}.`);
+      return;
+    }
+  }
+
+  // Merge with previous if editing (to keep created_at)
+  const prev = currentId ? (store.state.orders||[]).find(x=>x.id===currentId) || {} : {};
+  const o = {
+    ...prev,
+    id: currentId || null,
+    customer_id: selCustomer.value,
+    date: dateEl.value,
+    status: statusEl.value,
+    notes: (notesEl.value||'').trim(),
+    items,
+    updated_at: now
+  };
+  if (!o.id) o.created_at = now;
+
+  await store.upsertOrder(o);
+  resetForm(); render();
+}
 
   function printOrder(o){
     const c = (store.state.customers||[]).find(x=>x.id===o.customer_id) || {};
