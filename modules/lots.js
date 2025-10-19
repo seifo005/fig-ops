@@ -87,26 +87,35 @@ export function initLotsUI(store){
   }
 
   async function saveLot(){
-    if(!selVar.value){ alert('Please select a variety.'); selVar.focus(); return; }
-    const now = new Date().toISOString();
-    const lot = {
-      id: currentId,
-      variety_id: selVar.value,
-      method: method.value,
-      start_date: start.value,
-      check_date: check.value,
-      qty_total: Number(qtyT.value||0),
-      qty_rooted: Number(qtyR.value||0),
-      mix: (mix.value||'').trim(),
-      temp: temp.value? Number(temp.value): undefined,
-      humidity: hum.value? Number(hum.value): undefined,
-      notes: (notes.value||'').trim(),
-      updated_at: now
-    };
-    if(!lot.id) lot.created_at = now;
-    await store.upsertLot(lot);
-    resetForm(); render();
-  }
+  const now = new Date().toISOString();
+  const id = (idField?.value || currentId || '').trim();
+
+  if(!selVar.value){ alert('Please select a variety.'); selVar.focus(); return; }
+
+  // If editing, pull the previous record so we keep created_at (and anything else we didn’t edit)
+  const prev = id ? (store.state.lots || []).find(x => x.id === id) || {} : {};
+
+  const lot = {
+    ...prev,                // keep existing fields like created_at
+    id: id || null,         // keep same id on edit; null means new
+    variety_id: selVar.value,
+    method: method.value,
+    start_date: start.value,
+    check_date: check.value,
+    qty_total: Number(qtyT.value||0),
+    qty_rooted: Number(qtyR.value||0),
+    mix: (mix.value||'').trim(),
+    temp: temp.value ? Number(temp.value) : undefined,
+    humidity: hum.value ? Number(hum.value) : undefined,
+    notes: (notes.value||'').trim(),
+    updated_at: now
+  };
+  if (!lot.id) lot.created_at = now;
+
+  await store.upsertLot(lot);
+  resetForm();
+  render();
+}
 
   // Direct listeners
   if (qtyT) qtyT.oninput = success; 
