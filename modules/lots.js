@@ -16,6 +16,7 @@ export function initLotsUI(store){
   const hint   = document.getElementById('lot_edit_hint');
   const hid    = document.getElementById('lot_editing_id');
   const badge  = document.getElementById('lot_success_badge');
+  const idField = document.getElementById('lot_id');
 
   let currentId = null;
 
